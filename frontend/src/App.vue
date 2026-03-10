@@ -1,5 +1,5 @@
 <template>
-  <div class="d-flex flex-column min-vh-100">
+  <div class="d-flex flex-column min-vh-100 mx-auto" style="width: 80%;">
     <div class="w-75 w-lg-80  d-flex mx-auto"></div>
     <NavBar />
 
