@@ -65,7 +65,7 @@
                 </div>
             </div>
 
-            <!-- Botónes -->
+            <!-- Botones -->
             <div class="d-flex align-items-center mt-3">
                 <div class="flex-grow-1 d-flex justify-content-center">
                     <button type="submit" class="btn btn-success px-4">
@@ -105,7 +105,7 @@
                             <i class="bi bi-inbox me-2"></i>No hay empleados registrados.
                         </td>
                     </tr>
-                    <tr v-for="(empleado, index) in empleados" :key="empleado.id"
+                    <tr v-for="(empleado, index) in empleadosPaginados" :key="empleado.id"
                         :class="{ 'table-warning': empleadoEditandoId === empleado.id }">
                         <th scope="row" class="text-center py-1">{{ index + 1 }}</th>
                         <td class="py-1">{{ empleado.apellidos }}</td>
@@ -118,10 +118,11 @@
                             </span>
                         </td>
                         <td class="text-center py-1">
-                            <button class="btn btn-danger btn-sm">
+                            <button @click="delEmpleado(empleado.id)" class="btn btn-danger btn-sm" title="Eliminar">
                                 <i class="bi bi-trash"></i>
                             </button>
-                            <button class="btn btn-warning btn-sm ms-2">
+                            <button @click="selEmpleado(empleado.id)" class="btn btn-warning btn-sm ms-2"
+                                title="Editar">
                                 <i class="bi bi-pencil"></i>
                             </button>
                         </td>
@@ -131,22 +132,27 @@
         </div>
     </div>
 
-    <!-- Paginación (estática) -->
+    <!-- Paginación -->
     <div class="d-flex justify-content-center my-3">
-        <button class="btn btn-outline-success btn-sm me-2 rounded-0 border-1 shadow-none" disabled>
+        <button class="btn btn-outline-success btn-sm me-2 rounded-0 border-1 shadow-none" @click="beforePagina"
+            :disabled="currentPage <= 1">
             <i class="bi bi-chevron-left"></i>
         </button>
-        <span class="mx-3 align-self-center text-muted">Página 1</span>
-        <button class="btn btn-outline-success btn-sm rounded-0 border-1 shadow-none" disabled>
+        <span class="mx-3 align-self-center text-muted">
+            Página {{ currentPage }} de {{ totalPages }}
+        </span>
+        <button class="btn btn-outline-success btn-sm rounded-0 border-1 shadow-none" @click="nextPagina"
+            :disabled="currentPage >= totalPages">
             <i class="bi bi-chevron-right"></i>
         </button>
     </div>
+
+
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 
-// ── Modelo de datos ──────────────────────────────────────────────────────────
 
 // ── Modelo de datos ──────────────────────────────────────────────────────────
 function emptyEmpleado() {
@@ -165,6 +171,23 @@ const nuevoEmpleado = ref(emptyEmpleado());
 const editando = ref(false);
 const empleadoEditandoId = ref(null);
 const errores = ref({ nombre: false, email: false, movil: false });
+
+// ── Paginación ───────────────────────────────────────────────────────────────
+const currentPage = ref(1);
+const empleadosPorPage = 10;
+
+const totalPages = computed(() =>
+    Math.max(1, Math.ceil(empleados.value.length / empleadosPorPage))
+);
+
+const empleadosPaginados = computed(() => {
+    const start = (currentPage.value - 1) * empleadosPorPage;
+    return empleados.value.slice(start, start + empleadosPorPage);
+});
+
+const beforePagina = () => { if (currentPage.value > 1) currentPage.value--; };
+const nextPagina = () => { if (currentPage.value < totalPages.value) currentPage.value++; };
+let nextId = 5; // starts after the 4 sample employees
 
 // ── Helpers puros ────────────────────────────────────────────────────────────
 const puestoLabel = (p) =>
@@ -202,11 +225,46 @@ const capitalizarTexto = (campo) => {
         .join(" ");
 };
 
-// ── Guardar (stub — CRUD completo en commit 3) ───────────────────────────────
+
+
+// ── addEmpleado ──────────────────────────────────────────────────────────────
+const addEmpleado = (datos) => {
+    empleados.value.push({ ...datos, id: nextId++ });
+};
+
+// ── selEmpleado — carga en formulario para editar ────────────────────────────
+const selEmpleado = (id) => {
+    const emp = empleados.value.find((e) => e.id === id);
+    if (!emp) return;
+    nuevoEmpleado.value = { ...emp };
+    editando.value = true;
+    empleadoEditandoId.value = id;
+    errores.value = { nombre: false, email: false, movil: false };
+    window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
+// ── delEmpleado ──────────────────────────────────────────────────────────────
+const delEmpleado = (id) => {
+    const emp = empleados.value.find((e) => e.id === id);
+    if (!emp) return;
+    if (!confirm(`¿Eliminar a ${emp.nombre} ${emp.apellidos}?`)) return;
+    empleados.value = empleados.value.filter((e) => e.id !== id);
+    if (empleadoEditandoId.value === id) cancelarEdicion();
+    if (currentPage.value > totalPages.value) currentPage.value = totalPages.value;
+};
+
+// ── guardarEmpleado (add o update) ──────────────────────────────────────────
 const guardarEmpleado = () => {
     if (!validarFormulario()) return;
-    // lógica add/update se añade en el siguiente commit
-    alert(editando.value ? "Modificar: lógica pendiente" : "Guardar: lógica pendiente");
+
+    if (editando.value) {
+        const index = empleados.value.findIndex((e) => e.id === empleadoEditandoId.value);
+        if (index !== -1) empleados.value[index] = { ...nuevoEmpleado.value };
+    } else {
+        addEmpleado(nuevoEmpleado.value);
+    }
+
+    cancelarEdicion();
 };
 
 // ── Cancelar / Recargar ──────────────────────────────────────────────────────
