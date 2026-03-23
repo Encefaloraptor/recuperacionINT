@@ -5,7 +5,7 @@
         </h3>
 
         <!-- Formulario -->
-        <form class="mb-2">
+        <form @submit.prevent="guardarEmpleado" class="mb-2">
 
             <!-- Nombre y Apellidos -->
             <div class="mb-3 row g-3 align-items-center">
@@ -13,12 +13,15 @@
                     <label for="nombre" class="form-label mb-0 text-nowrap w-25">
                         Nombre: <span class="text-danger">*</span>
                     </label>
-                    <input type="text" id="nombre" class="form-control flex-grow-1" placeholder="Nombre del empleado" />
+                    <input type="text" id="nombre" v-model="nuevoEmpleado.nombre" @blur="capitalizarTexto('nombre')"
+                        class="form-control flex-grow-1" :class="{ 'is-invalid': errores.nombre }" />
+                    <div v-if="errores.nombre" class="invalid-feedback">El nombre es obligatorio.</div>
                 </div>
 
                 <div class="col-md-6 d-flex align-items-center">
                     <label for="apellidos" class="form-label me-4 mb-0 text-nowrap">Apellidos:</label>
-                    <input type="text" id="apellidos" class="form-control flex-grow-1" />
+                    <input type="text" id="apellidos" v-model="nuevoEmpleado.apellidos"
+                        @blur="capitalizarTexto('apellidos')" class="form-control flex-grow-1" />
                 </div>
             </div>
 
@@ -28,12 +31,16 @@
                     <label for="email" class="form-label mb-0 text-nowrap w-25">
                         Email: <span class="text-danger">*</span>
                     </label>
-                    <input type="email" id="email" class="form-control flex-grow-1" />
+                    <input type="email" id="email" v-model="nuevoEmpleado.email" @blur="validarEmail"
+                        class="form-control flex-grow-1" :class="{ 'is-invalid': errores.email }" />
+                    <div v-if="errores.email" class="invalid-feedback">Email obligatorio o inválido.</div>
                 </div>
 
                 <div class="col-md-3 d-flex align-items-center">
                     <label for="movil" class="form-label me-4 ms-4 mb-0 text-nowrap">Móvil:</label>
-                    <input type="tel" id="movil" class="form-control flex-grow-1 text-center" />
+                    <input type="tel" id="movil" v-model="nuevoEmpleado.movil" @blur="validarMovil"
+                        class="form-control flex-grow-1 text-center" :class="{ 'is-invalid': errores.movil }" />
+                    <div v-if="errores.movil" class="invalid-feedback">Móvil inválido (6xx/7xx).</div>
                 </div>
             </div>
 
@@ -41,7 +48,7 @@
             <div class="mb-3 row g-3 align-items-center">
                 <div class="col-md-5 d-flex align-items-center">
                     <label for="puesto" class="form-label mb-0 text-nowrap w-25">Puesto:</label>
-                    <select id="puesto" class="form-select flex-grow-1">
+                    <select id="puesto" v-model="nuevoEmpleado.puesto" class="form-select flex-grow-1">
                         <option disabled value="">Seleccione puesto</option>
                         <option value="rrhh">RRHH</option>
                         <option value="contabilidad">Contabilidad</option>
@@ -51,17 +58,21 @@
                 </div>
 
                 <div class="col-md-6 d-flex align-items-center justify-content-end">
-                    <button type="button" class="btn btn-outline-secondary btn-sm ms-2 p-1">
+                    <button type="button" class="btn btn-outline-secondary btn-sm ms-2 p-1" @click="recargarTodo"
+                        title="Recargar">
                         <i class="bi bi-arrow-clockwise fs-5"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- Botón guardar -->
+            <!-- Botónes -->
             <div class="d-flex align-items-center mt-3">
                 <div class="flex-grow-1 d-flex justify-content-center">
                     <button type="submit" class="btn btn-success px-4">
-                        Guardar Empleado
+                        {{ editando ? "Modificar Empleado" : "Guardar Empleado" }}
+                    </button>
+                    <button v-if="editando" type="button" class="btn btn-secondary px-4 ms-2" @click="cancelarEdicion">
+                        Cancelar
                     </button>
                 </div>
             </div>
@@ -94,7 +105,8 @@
                             <i class="bi bi-inbox me-2"></i>No hay empleados registrados.
                         </td>
                     </tr>
-                    <tr v-for="(empleado, index) in empleados" :key="empleado.id">
+                    <tr v-for="(empleado, index) in empleados" :key="empleado.id"
+                        :class="{ 'table-warning': empleadoEditandoId === empleado.id }">
                         <th scope="row" class="text-center py-1">{{ index + 1 }}</th>
                         <td class="py-1">{{ empleado.apellidos }}</td>
                         <td class="py-1">{{ empleado.nombre }}</td>
@@ -135,11 +147,12 @@
 import { ref } from "vue";
 
 // ── Modelo de datos ──────────────────────────────────────────────────────────
+
+// ── Modelo de datos ──────────────────────────────────────────────────────────
 function emptyEmpleado() {
     return { id: null, apellidos: "", nombre: "", email: "", movil: "", puesto: "" };
 }
 
-// Array de empleados con datos de ejemplo
 const empleados = ref([
     { id: 1, apellidos: "García López", nombre: "Ana", email: "ana.garcia@empresa.com", movil: "612345678", puesto: "rrhh" },
     { id: 2, apellidos: "Martínez Ruiz", nombre: "Pedro", email: "pedro.martinez@empresa.com", movil: "623456789", puesto: "contabilidad" },
@@ -147,12 +160,66 @@ const empleados = ref([
     { id: 4, apellidos: "Sánchez Mora", nombre: "Carlos", email: "carlos.sanchez@empresa.com", movil: "645678901", puesto: "almacen" },
 ]);
 
+// ── Estado formulario y validaciones ────────────────────────────────────────
+const nuevoEmpleado = ref(emptyEmpleado());
+const editando = ref(false);
+const empleadoEditandoId = ref(null);
+const errores = ref({ nombre: false, email: false, movil: false });
+
 // ── Helpers puros ────────────────────────────────────────────────────────────
 const puestoLabel = (p) =>
     ({ rrhh: "RRHH", contabilidad: "Contabilidad", almacen: "Almacén", ventas: "Ventas" }[p] ?? p);
 
 const badgePuesto = (p) =>
     ({ rrhh: "bg-primary", contabilidad: "bg-info text-dark", almacen: "bg-secondary", ventas: "bg-success" }[p] ?? "bg-light text-dark");
+
+// ── Validaciones ────────────────────────────────────────────────────────────
+const validarFormulario = () => {
+    errores.value.nombre = !nuevoEmpleado.value.nombre.trim();
+    validarEmail();
+    validarMovil();
+    return !errores.value.nombre && !errores.value.email;
+};
+
+const validarEmail = () => {
+    const email = nuevoEmpleado.value.email.trim();
+    if (!email) { errores.value.email = true; return; }
+    errores.value.email = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
+const validarMovil = () => {
+    const movil = nuevoEmpleado.value.movil.trim();
+    if (!movil) { errores.value.movil = false; return; }
+    errores.value.movil = !/^[67]\d{8}$/.test(movil);
+};
+
+const capitalizarTexto = (campo) => {
+    const texto = nuevoEmpleado.value[campo] ?? "";
+    nuevoEmpleado.value[campo] = texto
+        .toLowerCase()
+        .split(" ")
+        .map((p) => (!p ? "" : p.charAt(0).toLocaleUpperCase() + p.slice(1)))
+        .join(" ");
+};
+
+// ── Guardar (stub — CRUD completo en commit 3) ───────────────────────────────
+const guardarEmpleado = () => {
+    if (!validarFormulario()) return;
+    // lógica add/update se añade en el siguiente commit
+    alert(editando.value ? "Modificar: lógica pendiente" : "Guardar: lógica pendiente");
+};
+
+// ── Cancelar / Recargar ──────────────────────────────────────────────────────
+const cancelarEdicion = () => {
+    nuevoEmpleado.value = emptyEmpleado();
+    editando.value = false;
+    empleadoEditandoId.value = null;
+    errores.value = { nombre: false, email: false, movil: false };
+};
+
+const recargarTodo = () => {
+    cancelarEdicion();
+};
 </script>
 
 <style scoped>
