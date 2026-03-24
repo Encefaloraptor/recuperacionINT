@@ -69,7 +69,7 @@
             <div class="d-flex align-items-center mt-3">
                 <div class="flex-grow-1 d-flex justify-content-center">
                     <button type="submit" class="btn btn-success px-4">
-                        {{ editando ? "Modificar Empleado" : "Guardar Empleado" }}
+                        {{ editando ? "Modificar" : "Guardar" }}
                     </button>
                     <button v-if="editando" type="button" class="btn btn-secondary px-4 ms-2" @click="cancelarEdicion">
                         Cancelar
