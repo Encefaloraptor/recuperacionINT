@@ -202,13 +202,8 @@
 import { ref, computed } from "vue";
 import Swal from "sweetalert2";
 
-// ── Pinia store ──────────────────────────────────────────────────────────────
-// Reemplaza con tu store real cuando esté disponible:
-//   import { useAuthStore } from "@/stores/auth"
-//   const authStore = useAuthStore()
-//
-// Fallback funcional para desarrollo:
-const authStore = { usuario: localStorage.getItem("user") || "admin" };
+import { useAuthStore } from "../stores/auth";
+const authStore = useAuthStore();
 
 // ── Empleados (en producción: importar desde store o API) ────────────────────
 const empleados = ref([
@@ -226,9 +221,13 @@ const tareas = ref([
     { id: 4, fecha: "2026-03-20", titulo: "Onboarding nuevo empleado", descripcion: "Proceso de incorporación.", estado: "pendiente", prioridad: "baja", empleadoId: 1 },
 ]);
 
+const tareasOrdenadas = computed(() =>
+    [...tareas.value].sort((a, b) => a.empleadoId - b.empleadoId)
+);
+
 let nextId = 5;
 
-// ── Modelo vacío ─────────────────────────────────────────────────────────────
+
 function emptyTarea() {
     return { id: null, fecha: "", titulo: "", descripcion: "", estado: "", prioridad: "media", empleadoId: null };
 }
@@ -242,7 +241,7 @@ const errores = ref({ titulo: false, estado: false, empleadoId: false });
 // ── Estado búsqueda empleado ─────────────────────────────────────────────────
 const busquedaEmpleadoId = ref(null);
 const empleadoSeleccionado = ref(null);
-const estadoBusqueda = ref("idle"); // "idle" | "ok" | "error"
+const estadoBusqueda = ref("idle");
 
 const claseInputEmpleado = computed(() => ({
     "input-empleado-ok": estadoBusqueda.value === "ok",
@@ -255,12 +254,12 @@ const currentPage = ref(1);
 const tareasPorPage = 8;
 
 const totalPages = computed(() =>
-    Math.max(1, Math.ceil(tareas.value.length / tareasPorPage))
+    Math.max(1, Math.ceil(tareasOrdenadas.value.length / tareasPorPage))
 );
 
 const tareasPaginadas = computed(() => {
     const start = (currentPage.value - 1) * tareasPorPage;
-    return tareas.value.slice(start, start + tareasPorPage);
+    return tareasOrdenadas.value.slice(start, start + tareasPorPage);
 });
 
 const beforePagina = () => { if (currentPage.value > 1) currentPage.value--; };
