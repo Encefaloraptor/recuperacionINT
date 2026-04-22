@@ -4,21 +4,29 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev:cliente": "vite",
+    "dev:server": "nodemon --exec node backend/server.js",
     "build": "vite build",
     "preview": "vite preview",
-    "router-link": "vue-router-link"
+    "router-link": "vue-router-link",
+    "start": "concurrently -k \"npm run dev:server\" \"npm run dev:cliente\""
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.2.0",
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "json-server": "^1.0.0-beta.15",
+    "pinia": "^3.0.4",
     "sweetalert2": "^11.26.21",
     "vue": "^3.5.25",
     "vue-router": "^5.0.3"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.2",
+    "@vitejs/plugin-vue": "^6.0.6",
+    "concurrently": "^9.2.1",
+    "nodemon": "^3.1.14",
     "vite": "^7.3.1"
   }
 }

@@ -1,24 +1,24 @@
 import { createRouter } from "vue-router";
 import { createWebHistory } from "vue-router";
-import InicioView from "../../frontend/src/components/Inicio.vue";
-import EmpleadosView from "../../frontend/src/components/EmpleaDos.vue";
-import Tareas from "../../frontend/src/components/TarEas.vue";
-import Estadisticas from "../../frontend/src/components/EstadisTicas.vue";
-import AcercaDe from "../../frontend/src/components/AbouT.vue";
-import ConTacto from "../src/components/ConTacto.vue";
-import AvisoLegal from "../src/components/AvisoLegal.vue";
-import PoliticaPrivacidad from "../src/components/PoliticaPrivacidad.vue";
-
+import Inicio from "../components/Inicio.vue";
+import EmpleaDos from "../components/EmpleaDos.vue";
+import Tareas from "../components/TarEas.vue";
+import Estadisticas from "../components/EstadisTicas.vue";
+import AcercaDe from "../components/About.vue";
+import ConTacto from "../components/ConTacto.vue";
+import AvisoLegal from "../components/AvisoLegal.vue";
+import PoliticaPrivacidad from "../components/PoliticaPrivacidad.vue";
+import Usuarios from "../components/Usuarios.vue";
 const routes = [
   {
     path: "/",
     name: "Inicio",
-    component: InicioView,
+    component: Inicio,
   },
   {
     path: "/empleados",
     name: "Empleados",
-    component: EmpleadosView,
+    component: EmpleaDos,
   },
   {
     path: "/tareas",
@@ -49,6 +49,11 @@ const routes = [
     path: "/politica-privacidad",
     name: "Politica Privacidad",
     component: PoliticaPrivacidad,
+  },
+  {
+    path: "/usuarios",
+    name: "Usuarios",
+    component: Usuarios,
   },
 ];
 
