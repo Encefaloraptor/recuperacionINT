@@ -8,7 +8,7 @@ import AcercaDe from "../components/About.vue";
 import ConTacto from "../components/ConTacto.vue";
 import AvisoLegal from "../components/AvisoLegal.vue";
 import PoliticaPrivacidad from "../components/PoliticaPrivacidad.vue";
-import Usuarios from "../components/Usuarios.vue";
+
 const routes = [
   {
     path: "/",
@@ -49,11 +49,6 @@ const routes = [
     path: "/politica-privacidad",
     name: "Politica Privacidad",
     component: PoliticaPrivacidad,
-  },
-  {
-    path: "/usuarios",
-    name: "Usuarios",
-    component: Usuarios,
   },
 ];
 

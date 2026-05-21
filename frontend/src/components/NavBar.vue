@@ -30,9 +30,7 @@
           <li class="nav-item">
             <router-link to="/about" class="nav-link">Acerca de</router-link>
           </li>
-          <li class="nav-item">
-            <router-link to="/usuarios" class="nav-link">Usuarios</router-link>
-          </li>
+
         </ul>
       </div>
     </div>
