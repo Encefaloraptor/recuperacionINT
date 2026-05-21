@@ -199,37 +199,31 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import Swal from "sweetalert2";
-
 import { useAuthStore } from "../stores/auth";
+import { getEmpleados } from "../servicios/empleados-service.js";
+import { getTareas, createTarea, updateTarea, deleteTarea } from "../servicios/tareas-service.js";
 const authStore = useAuthStore();
 
-// ── Empleados (en producción: importar desde store o API) ────────────────────
-const empleados = ref([
-    { id: 1, apellidos: "García López", nombre: "Ana" },
-    { id: 2, apellidos: "Martínez Ruiz", nombre: "Pedro" },
-    { id: 3, apellidos: "Fernández Díaz", nombre: "Laura" },
-    { id: 4, apellidos: "Sánchez Mora", nombre: "Carlos" },
-]);
-
-// ── Tareas (estado local en array) ───────────────────────────────────────────
-const tareas = ref([
-    { id: 1, fecha: "2026-03-01", titulo: "Revisar nóminas Q1", descripcion: "Verificar cálculos del primer trimestre.", estado: "finalizada", prioridad: "alta", empleadoId: 2 },
-    { id: 2, fecha: "2026-03-10", titulo: "Inventario almacén", descripcion: "Conteo físico de stock.", estado: "en_proceso", prioridad: "media", empleadoId: 4 },
-    { id: 3, fecha: "2026-03-15", titulo: "Campaña primavera ventas", descripcion: "Preparar materiales de la campaña.", estado: "pendiente", prioridad: "alta", empleadoId: 3 },
-    { id: 4, fecha: "2026-03-20", titulo: "Onboarding nuevo empleado", descripcion: "Proceso de incorporación.", estado: "pendiente", prioridad: "baja", empleadoId: 1 },
-]);
+const empleados = ref([]);
+const tareas = ref([]);
+const loading = ref(false);
 
 const tareasOrdenadas = computed(() =>
     [...tareas.value].sort((a, b) => a.empleadoId - b.empleadoId)
 );
 
-let nextId = 5;
-
-
 function emptyTarea() {
-    return { id: null, fecha: "", titulo: "", descripcion: "", estado: "", prioridad: "media", empleadoId: null };
+    return {
+        id: null,
+        fecha: "",
+        titulo: "",
+        descripcion: "",
+        estado: "",
+        prioridad: "media",
+        empleadoId: null,
+    };
 }
 
 // ── Estado formulario ────────────────────────────────────────────────────────
@@ -292,6 +286,41 @@ const rowClasEstado = (e) => ({
     finalizada: "row-finalizada",
 }[e] ?? "");
 
+const mostrarCarga = (titulo) => {
+    Swal.fire({
+        title: titulo,
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        },
+    });
+};
+
+const cerrarCarga = () => {
+    if (Swal.isVisible()) Swal.close();
+};
+
+const cargarDatos = async () => {
+    loading.value = true;
+    mostrarCarga("Cargando tareas y empleados...");
+    try {
+        const [resEmpleados, resTareas] = await Promise.all([getEmpleados(), getTareas()]);
+        empleados.value = resEmpleados.data;
+        tareas.value = resTareas.data;
+        if (currentPage.value > totalPages.value) currentPage.value = totalPages.value;
+    } catch (error) {
+        console.error("Error cargando datos", error);
+        Swal.fire({
+            icon: "error",
+            title: "Error al cargar los datos",
+            text: error.message || "No se pudo conectar con la API.",
+        });
+    } finally {
+        loading.value = false;
+        cerrarCarga();
+    }
+};
+
 // ── buscarEmpleado ────────────────────────────────────────────────────────────
 const buscarEmpleado = () => {
     const id = busquedaEmpleadoId.value;
@@ -323,11 +352,6 @@ const buscarEmpleado = () => {
     }
 };
 
-// ── addTarea ──────────────────────────────────────────────────────────────────
-const addTarea = (datos) => {
-    tareas.value.push({ ...datos, id: nextId++ });
-};
-
 // ── selTarea ──────────────────────────────────────────────────────────────────
 const selTarea = (id) => {
     const tarea = tareas.value.find((t) => t.id === id);
@@ -351,7 +375,7 @@ const delTarea = async (id) => {
     const tarea = tareas.value.find((t) => t.id === id);
     if (!tarea) return;
 
-    const result = await Swal.fire({
+    const confirmacion = await Swal.fire({
         title: `¿Eliminar "${tarea.titulo}"?`,
         icon: "warning",
         showCancelButton: true,
@@ -360,38 +384,64 @@ const delTarea = async (id) => {
         confirmButtonColor: "#dc3545",
     });
 
-    if (!result.isConfirmed) return;
+    if (!confirmacion.isConfirmed) return;
 
-    tareas.value = tareas.value.filter((t) => t.id !== id);
-    if (tareaEditandoId.value === id) cancelarEdicion();
-    if (currentPage.value > totalPages.value) currentPage.value = totalPages.value;
-
-    Swal.fire({ icon: "success", title: "Tarea eliminada", timer: 1200, showConfirmButton: false });
+    loading.value = true;
+    mostrarCarga("Eliminando tarea...");
+    try {
+        await deleteTarea(id);
+        await cargarDatos();
+        if (tareaEditandoId.value === id) cancelarEdicion();
+        Swal.fire({ icon: "success", title: "Tarea eliminada", timer: 1300, showConfirmButton: false });
+    } catch (error) {
+        console.error("Error eliminando tarea", error);
+        Swal.fire({
+            icon: "error",
+            title: "Error al eliminar tarea",
+            text: error.message || "No se pudo completar la operación.",
+        });
+    } finally {
+        loading.value = false;
+        cerrarCarga();
+    }
 };
 
 // ── guardarTarea ──────────────────────────────────────────────────────────────
 const guardarTarea = async () => {
     if (!validarFormulario()) return;
 
-    const result = await Swal.fire({
+    const confirmacion = await Swal.fire({
         title: editando.value ? "¿Modificar esta tarea?" : "¿Guardar nueva tarea?",
         icon: "question",
         showCancelButton: true,
         confirmButtonText: editando.value ? "Modificar" : "Guardar",
         cancelButtonText: "Cancelar",
     });
-    if (!result.isConfirmed) return;
+    if (!confirmacion.isConfirmed) return;
 
-    if (editando.value) {
-        const idx = tareas.value.findIndex((t) => t.id === tareaEditandoId.value);
-        if (idx !== -1) tareas.value[idx] = { ...nuevaTarea.value };
-        Swal.fire({ icon: "success", title: "Tarea modificada", timer: 1300, showConfirmButton: false });
-    } else {
-        addTarea(nuevaTarea.value);
-        Swal.fire({ icon: "success", title: "Tarea añadida", timer: 1300, showConfirmButton: false });
+    loading.value = true;
+    mostrarCarga(editando.value ? "Guardando tarea..." : "Creando tarea...");
+    try {
+        if (editando.value) {
+            await updateTarea(tareaEditandoId.value, nuevaTarea.value);
+            Swal.fire({ icon: "success", title: "Tarea modificada", timer: 1300, showConfirmButton: false });
+        } else {
+            await createTarea(nuevaTarea.value);
+            Swal.fire({ icon: "success", title: "Tarea añadida", timer: 1300, showConfirmButton: false });
+        }
+        await cargarDatos();
+        cancelarEdicion();
+    } catch (error) {
+        console.error("Error guardando tarea", error);
+        Swal.fire({
+            icon: "error",
+            title: "Error al guardar tarea",
+            text: error.message || "No se pudo completar la operación.",
+        });
+    } finally {
+        loading.value = false;
+        cerrarCarga();
     }
-
-    cancelarEdicion();
 };
 
 // ── cancelarEdicion / recargarTodo ────────────────────────────────────────────
@@ -405,14 +455,16 @@ const cancelarEdicion = () => {
     estadoBusqueda.value = "idle";
 };
 
-const recargarTodo = () => {
-    cancelarEdicion();
+const recargarTodo = async () => {
     currentPage.value = 1;
+    cancelarEdicion();
+    await cargarDatos();
 };
 
 // ── Validaciones ──────────────────────────────────────────────────────────────
 const validarFormulario = () => {
-    errores.value.titulo = !nuevaTarea.value.titulo.trim();
+    const titulo = nuevaTarea.value.titulo.trim();
+    errores.value.titulo = !titulo;
     errores.value.estado = !nuevaTarea.value.estado;
     errores.value.empleadoId = !nuevaTarea.value.empleadoId;
 
@@ -420,14 +472,34 @@ const validarFormulario = () => {
         Swal.fire({
             icon: "warning",
             title: "Faltan campos obligatorios",
-            text: "Revise Título, Estado y Empleado.",
+            text: "Revisa Título, Estado y Empleado.",
             timer: 2000,
             showConfirmButton: false,
         });
         return false;
     }
+
+    const tituloDuplicado = tareas.value.some(
+        (t) => t.titulo.trim().toLowerCase() === titulo.toLowerCase() && t.id !== tareaEditandoId.value
+    );
+
+    if (tituloDuplicado) {
+        Swal.fire({
+            icon: "warning",
+            title: "Título duplicado",
+            text: "Ya existe otra tarea con el mismo título.",
+            timer: 2200,
+            showConfirmButton: false,
+        });
+        return false;
+    }
+
     return true;
 };
+
+onMounted(() => {
+    cargarDatos();
+});
 </script>
 
 <style scoped>

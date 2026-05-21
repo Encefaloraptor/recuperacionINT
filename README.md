@@ -3,14 +3,18 @@
 # Nombre: Arón García Álvarez
 
 # Tecnología: Vue 3 + Vite + vue-router
+
 # Versión node: v24.14.0
 
-# Instrucciones de instalación 
+# Instrucciones de instalación
+
 # 1. clonar repositorio
+
 git clone https://github.com/Encefaloraptor/recuperacionINT
 cd recuperacionINTs
 
 # 2. Instalar dependencias
+
 npm install
 
 # 3. Levantar App
@@ -22,3 +26,15 @@ npm start
 http://localhost:5173
 
 # 5. Configurar variables de entorno
+
+# 6. Levantar servidor de datos JSON Server
+
+npm run dev:server
+
+# Puerto del servidor backend simulado
+
+http://localhost:3000/api
+
+# 7. Levantar la aplicación frontend
+
+npm run dev:cliente

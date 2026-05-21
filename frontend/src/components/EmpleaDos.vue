@@ -151,7 +151,14 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
+import Swal from "sweetalert2";
+import {
+    getEmpleados,
+    createEmpleado,
+    updateEmpleado,
+    deleteEmpleado,
+} from "../servicios/empleados-service.js";
 
 
 // ── Modelo de datos ──────────────────────────────────────────────────────────
@@ -159,18 +166,14 @@ function emptyEmpleado() {
     return { id: null, apellidos: "", nombre: "", email: "", movil: "", puesto: "" };
 }
 
-const empleados = ref([
-    { id: 1, apellidos: "García López", nombre: "Ana", email: "ana.garcia@empresa.com", movil: "612345678", puesto: "rrhh" },
-    { id: 2, apellidos: "Martínez Ruiz", nombre: "Pedro", email: "pedro.martinez@empresa.com", movil: "623456789", puesto: "contabilidad" },
-    { id: 3, apellidos: "Fernández Díaz", nombre: "Laura", email: "laura.fernandez@empresa.com", movil: "634567890", puesto: "ventas" },
-    { id: 4, apellidos: "Sánchez Mora", nombre: "Carlos", email: "carlos.sanchez@empresa.com", movil: "645678901", puesto: "almacen" },
-]);
+const empleados = ref([]);
 
 // ── Estado formulario y validaciones ────────────────────────────────────────
 const nuevoEmpleado = ref(emptyEmpleado());
 const editando = ref(false);
 const empleadoEditandoId = ref(null);
 const errores = ref({ nombre: false, email: false, movil: false });
+const loading = ref(false);
 
 // ── Paginación ───────────────────────────────────────────────────────────────
 const currentPage = ref(1);
@@ -187,7 +190,6 @@ const empleadosPaginados = computed(() => {
 
 const beforePagina = () => { if (currentPage.value > 1) currentPage.value--; };
 const nextPagina = () => { if (currentPage.value < totalPages.value) currentPage.value++; };
-let nextId = 5; // starts after the 4 sample employees
 
 // ── Helpers puros ────────────────────────────────────────────────────────────
 const puestoLabel = (p) =>
@@ -195,6 +197,40 @@ const puestoLabel = (p) =>
 
 const badgePuesto = (p) =>
     ({ rrhh: "bg-primary", contabilidad: "bg-info text-dark", almacen: "bg-secondary", ventas: "bg-success" }[p] ?? "bg-light text-dark");
+
+const mostrarCarga = (titulo) => {
+    Swal.fire({
+        title: titulo,
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        },
+    });
+};
+
+const cerrarCarga = () => {
+    if (Swal.isVisible()) Swal.close();
+};
+
+const cargarEmpleados = async () => {
+    loading.value = true;
+    mostrarCarga("Cargando empleados...");
+    try {
+        const res = await getEmpleados();
+        empleados.value = res.data;
+        if (currentPage.value > totalPages.value) currentPage.value = totalPages.value;
+    } catch (error) {
+        console.error("Error cargando empleados", error);
+        Swal.fire({
+            icon: "error",
+            title: "Error al cargar empleados",
+            text: error.message || "No se pudo conectar con la API.",
+        });
+    } finally {
+        loading.value = false;
+        cerrarCarga();
+    }
+};
 
 // ── Validaciones ────────────────────────────────────────────────────────────
 const validarFormulario = () => {
@@ -227,11 +263,6 @@ const capitalizarTexto = (campo) => {
 
 
 
-// ── addEmpleado ──────────────────────────────────────────────────────────────
-const addEmpleado = (datos) => {
-    empleados.value.push({ ...datos, id: nextId++ });
-};
-
 // ── selEmpleado — carga en formulario para editar ────────────────────────────
 const selEmpleado = (id) => {
     const emp = empleados.value.find((e) => e.id === id);
@@ -244,27 +275,78 @@ const selEmpleado = (id) => {
 };
 
 // ── delEmpleado ──────────────────────────────────────────────────────────────
-const delEmpleado = (id) => {
+const delEmpleado = async (id) => {
     const emp = empleados.value.find((e) => e.id === id);
     if (!emp) return;
-    if (!confirm(`¿Eliminar a ${emp.nombre} ${emp.apellidos}?`)) return;
-    empleados.value = empleados.value.filter((e) => e.id !== id);
-    if (empleadoEditandoId.value === id) cancelarEdicion();
-    if (currentPage.value > totalPages.value) currentPage.value = totalPages.value;
+
+    const confirmacion = await Swal.fire({
+        title: `¿Eliminar a ${emp.nombre} ${emp.apellidos}?`,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Sí, eliminar",
+        cancelButtonText: "Cancelar",
+        confirmButtonColor: "#dc3545",
+    });
+
+    if (!confirmacion.isConfirmed) return;
+
+    loading.value = true;
+    mostrarCarga("Eliminando empleado...");
+    try {
+        await deleteEmpleado(id);
+        await cargarEmpleados();
+        if (empleadoEditandoId.value === id) cancelarEdicion();
+        Swal.fire({ icon: "success", title: "Empleado eliminado", timer: 1300, showConfirmButton: false });
+    } catch (error) {
+        console.error("Error eliminando empleado", error);
+        Swal.fire({
+            icon: "error",
+            title: "Error al eliminar empleado",
+            text: error.message || "No se pudo completar la operación.",
+        });
+    } finally {
+        loading.value = false;
+        cerrarCarga();
+    }
 };
 
 // ── guardarEmpleado (add o update) ──────────────────────────────────────────
-const guardarEmpleado = () => {
+const guardarEmpleado = async () => {
     if (!validarFormulario()) return;
 
-    if (editando.value) {
-        const index = empleados.value.findIndex((e) => e.id === empleadoEditandoId.value);
-        if (index !== -1) empleados.value[index] = { ...nuevoEmpleado.value };
-    } else {
-        addEmpleado(nuevoEmpleado.value);
-    }
+    const confirmacion = await Swal.fire({
+        title: editando.value ? "¿Modificar este empleado?" : "¿Guardar nuevo empleado?",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: editando.value ? "Modificar" : "Guardar",
+        cancelButtonText: "Cancelar",
+    });
 
-    cancelarEdicion();
+    if (!confirmacion.isConfirmed) return;
+
+    loading.value = true;
+    mostrarCarga(editando.value ? "Guardando cambios..." : "Creando empleado...");
+    try {
+        if (editando.value) {
+            await updateEmpleado(empleadoEditandoId.value, nuevoEmpleado.value);
+            Swal.fire({ icon: "success", title: "Empleado modificado", timer: 1300, showConfirmButton: false });
+        } else {
+            await createEmpleado(nuevoEmpleado.value);
+            Swal.fire({ icon: "success", title: "Empleado creado", timer: 1300, showConfirmButton: false });
+        }
+        await cargarEmpleados();
+        cancelarEdicion();
+    } catch (error) {
+        console.error("Error guardando empleado", error);
+        Swal.fire({
+            icon: "error",
+            title: "Error al guardar empleado",
+            text: error.message || "No se pudo completar la operación.",
+        });
+    } finally {
+        loading.value = false;
+        cerrarCarga();
+    }
 };
 
 // ── Cancelar / Recargar ──────────────────────────────────────────────────────
@@ -275,9 +357,14 @@ const cancelarEdicion = () => {
     errores.value = { nombre: false, email: false, movil: false };
 };
 
-const recargarTodo = () => {
+const recargarTodo = async () => {
     cancelarEdicion();
+    await cargarEmpleados();
 };
+
+onMounted(() => {
+    cargarEmpleados();
+});
 </script>
 
 <style scoped>

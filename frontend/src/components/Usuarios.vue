@@ -5,8 +5,8 @@ import {
     createUsuario,
     updateUsuario,
     deleteUsuario,
-} from "../services/usuarios.service.js";
-import { useUsuarioStore } from "../store/usuarioStore.js";
+} from "../servicios/usuarios-sevice.js";
+import { useUsuarioStore } from "../stores/usuarioStore.js";
 
 // Store
 const usuarioStore = useUsuarioStore();

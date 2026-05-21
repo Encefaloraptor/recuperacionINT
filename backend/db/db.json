@@ -1,4 +1,74 @@
 {
-  "usuarios": [{}],
-  "tareas": [{}]
+  "empleados": [
+    {
+      "id": 1,
+      "nombre": "Ana",
+      "apellidos": "García López",
+      "email": "ana.garcia@empresa.com",
+      "movil": "612345678",
+      "puesto": "rrhh"
+    },
+    {
+      "id": 2,
+      "nombre": "Pedro",
+      "apellidos": "Martínez Ruiz",
+      "email": "pedro.martinez@empresa.com",
+      "movil": "623456789",
+      "puesto": "contabilidad"
+    },
+    {
+      "id": 3,
+      "nombre": "Laura",
+      "apellidos": "Fernández Díaz",
+      "email": "laura.fernandez@empresa.com",
+      "movil": "634567890",
+      "puesto": "ventas"
+    },
+    {
+      "id": 4,
+      "nombre": "Carlos",
+      "apellidos": "Sánchez Mora",
+      "email": "carlos.sanchez@empresa.com",
+      "movil": "645678901",
+      "puesto": "almacen"
+    }
+  ],
+  "tareas": [
+    {
+      "id": 1,
+      "fecha": "2026-03-01",
+      "titulo": "Revisar nóminas Q1",
+      "descripcion": "Verificar cálculos del primer trimestre.",
+      "estado": "finalizada",
+      "prioridad": "alta",
+      "empleadoId": 2
+    },
+    {
+      "id": 2,
+      "fecha": "2026-03-10",
+      "titulo": "Inventario almacén",
+      "descripcion": "Conteo físico de stock.",
+      "estado": "en_proceso",
+      "prioridad": "media",
+      "empleadoId": 4
+    },
+    {
+      "id": 3,
+      "fecha": "2026-03-15",
+      "titulo": "Campaña primavera ventas",
+      "descripcion": "Preparar materiales de la campaña.",
+      "estado": "pendiente",
+      "prioridad": "alta",
+      "empleadoId": 3
+    },
+    {
+      "id": 4,
+      "fecha": "2026-03-20",
+      "titulo": "Onboarding nuevo empleado",
+      "descripcion": "Proceso de incorporación.",
+      "estado": "pendiente",
+      "prioridad": "baja",
+      "empleadoId": 1
+    }
+  ]
 }
