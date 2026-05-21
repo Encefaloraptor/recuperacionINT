@@ -15,7 +15,7 @@ npm install
 
 # 3. Levantar App
 
-npm run dev
+npm start
 
 # 4. Ver en navegador
 
